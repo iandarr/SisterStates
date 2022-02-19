@@ -1,0 +1,25 @@
+%% test 
+
+old_state=       [1     0   0   0];
+old_propensities=[0     1   .1  .1...
+                  .2    0   0   0];
+
+%% Cycle through individidual reactions
+reaction_index=1;
+fprintf('-----------------------------------------------------------------------------------\n')
+fprintf('  reaction_index= %i\n',reaction_index);
+fprintf('       old state=    ')
+fprintf('%i      ',old_state); fprintf('\n');
+fprintf('old propensities= ')
+fprintf('%.2f   ',old_propensities); fprintf('\n');
+
+[new_state,new_propensities]=updateV1_4binary_states(old_state,old_propensities,reaction_index);
+
+fprintf('       new state=    ')
+fprintf('%i      ',new_state); fprintf('\n');
+fprintf('new propensities= ')
+fprintf('%.2f   ',new_propensities); fprintf('\n');
+
+
+old_state=new_state;
+old_propensities=new_propensities;
