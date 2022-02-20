@@ -120,8 +120,7 @@ while tnow<=time_to_run
     [Tdiv_pop_states,Tdiv_pop_propensities,Tdiv_rxns]=simulate_popV2(G,Tdiv_pop_states,timepoint_interval);
     tnow=tnow+timepoint_interval;% update the time
     
-    % make a hypothetical 'sort'
-    
+    % make a 
     % take hypothetical measurements
     iMeas=iMeas+1;
     

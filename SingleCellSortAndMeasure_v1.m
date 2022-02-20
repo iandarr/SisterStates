@@ -6,8 +6,8 @@
 %% simulation inputs
 clear
 rng(1)
-ncells=10;
-t_run_steady_state=50; %run for t_run time units;
+ncells=400;
+t_run_steady_state=20; %run for t_run time units;
 display_rxn_on=false;
 realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back on simluation progress and expected simulation time after this many
 
@@ -27,7 +27,7 @@ G = digraph(s,t); %create digraph
 %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
 G.Edges.rate_affecting=repmat({'pro'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
 G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
-G.Edges.funct_mag=     repmat(10,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
+G.Edges.funct_mag=     repmat(5,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
 
 % %% Create gene network G (parallel)
 % s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
@@ -50,8 +50,8 @@ norm_ProRate=1;
 norm_DecRate=1;
 G.Nodes.NatProRate=ones(nnodes,1)*norm_ProRate; %apply general rates
 G.Nodes.NatDecRate=ones(nnodes,1)*norm_DecRate; %apply general rates
-G.Nodes.NatProRate(1)=0.2; %first node
-G.Nodes.NatDecRate(1)=0.2; %first node
+G.Nodes.NatProRate(1)=1; %first node
+G.Nodes.NatDecRate(1)=1; %first node
 
 G.Edges.relationship_label=join([G.Edges.rate_affecting,G.Edges.funct_type,cellstr(num2str(G.Edges.funct_mag))]); %just for the graph, not used elsewhere
 G.Edges.relationship_label_short=replace(G.Edges.relationship_label,{'pro','dec','mult','add',' '},{'P','D','*','+',''});
@@ -69,7 +69,9 @@ ngenes=size(G.Nodes,1);
 Tinit_pop_states=array2table(false([ncells,ngenes])); %start at all zero states
 Tinit_pop_states.Properties.VariableNames=G.Nodes.Name';
 % SIMULATE POPULATION
+fprintf("simulating network to a 'steady state'...")
 [Tss_pop_states,Tss_pop_propensities,T_rxns]=simulate_popV2(G,Tinit_pop_states,t_run_steady_state);%,display_rxn_on,realtime_print_sim_progress);
+fprintf("done\n")
 % or load steady state from file
 %clear
 %load mySS_50
@@ -90,8 +92,8 @@ Tdiv_pop_states=[Tdiv_cellLabels,Tdiv_pop_states]; %add cell labels
 %% Now run the population in short incremental periods which are shorter than the timescale of a single reaction
 % since production reactions occur at rate 1 in our updateV1_4binary
 % function, want to run it less than this.
-timepoint_interval=0.2;
-time_to_run=30;
+timepoint_interval=0.1;
+time_to_run=5;
 tnow=0;
 rng(1)
 % %% Now simulate forward in time. At longer periods of time, we will
@@ -110,28 +112,58 @@ MeasureSisterNaive=struct();
 MeasureSisterControl=struct();
 alpha=0.05; % alpha for confidence interval on plot
 
-GroupingGenes=G.Nodes.Name; % use all genes to group cells by
+sortGenes=G.Nodes.Name; % use all genes to sort cells by
+%GroupingGenes=G.Nodes.Name; % use all genes to group cells by
 
-iMeas=1;
-Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
-Meas(iMeas).time=tnow;
+S=struct();
+iS=0;
+
+%Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
+%Meas(iMeas).time=tnow;
 while tnow<=time_to_run
+    fprintf('tnow=%f of %f\n',tnow,time_to_run)
     
     [Tdiv_pop_states,Tdiv_pop_propensities,Tdiv_rxns]=simulate_popV2(G,Tdiv_pop_states,timepoint_interval);
     tnow=tnow+timepoint_interval;% update the time
     
-    % make a hypothetical 'sort'
+    % make a hypothetical 'sort' (don't really need to do this for all
+    % times though
+    iS=iS+1;
+    for iSortGene=1:length(sortGenes)
+        sortGene=sortGenes{iSortGene};
+        S(iS).(sortGene).idxHi=Tdiv_pop_states.(sortGene);
+        S(iS).(sortGene).dtSort=tnow;
+    end
     
-    % take hypothetical measurements
-    iMeas=iMeas+1;
-    
-    % take sister naive and sister control measurements
-    Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
-    Meas(iMeas).time=tnow;
+    %% make measurements on sorted cells.
+    %iMeas=iMeas+1;
+    % first decide on past sort times to take measurements for
+    iStoMeasureList=1:length(S); % all of them
+    % now take measurements (Both sister-naive and sister-control measurements)
+    for  iStoMeasure=iStoMeasureList
+        sortGeneList=fields(S(iStoMeasure))';
+        for iSortGene=1:length(sortGeneList)
+            sortGene=sortGeneList{iSortGene};
+            idxHiAtSortTime=S(iStoMeasure).(sortGene).idxHi;
+        	Meas=DifferentialAnalysisBinofit2(Tdiv_pop_states,idxHiAtSortTime);
+            if ~isfield(S(iStoMeasure).(sortGene),'meas')
+                iMeas=1;
+            else
+                iMeas=length(S(iStoMeasure).(sortGene).meas)+1;
+            end
+            S(iStoMeasure).(sortGene).meas(iMeas).data=Meas;
+            % record times
+            S(iStoMeasure).(sortGene).meas(iMeas).time=tnow;
+            dtSort=S(iStoMeasure).(sortGene).dtSort;
+            S(iStoMeasure).(sortGene).meas(iMeas).dtMeas=tnow-dtSort;
+        end
+    end
 end
-
+%% save/load sort data in struct S
+save('sim2','S')
+load('sim2','S')
 %%
-tutorialApp1(Meas)
+ViewSisterStates(S)
 
 
 

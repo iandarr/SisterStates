@@ -90,7 +90,7 @@ Tdiv_pop_states=[Tdiv_cellLabels,Tdiv_pop_states]; %add cell labels
 %% Now run the population in short incremental periods which are shorter than the timescale of a single reaction
 % since production reactions occur at rate 1 in our updateV1_4binary
 % function, want to run it less than this.
-timepoint_interval=0.2;
+timepoint_interval=1;
 time_to_run=30;
 tnow=0;
 rng(1)
@@ -110,25 +110,58 @@ MeasureSisterNaive=struct();
 MeasureSisterControl=struct();
 alpha=0.05; % alpha for confidence interval on plot
 
-GroupingGenes=G.Nodes.Name; % use all genes to group cells by
+sortGenes=G.Nodes.Name; % use all genes to sort cells by
+%GroupingGenes=G.Nodes.Name; % use all genes to group cells by
 
-iMeas=1;
-Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
-Meas(iMeas).time=tnow;
+S=struct();
+iS=0;
+
+%Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
+%Meas(iMeas).time=tnow;
 while tnow<=time_to_run
+    fprintf('tnow=%f of %f\n',tnow,time_to_run)
     
     [Tdiv_pop_states,Tdiv_pop_propensities,Tdiv_rxns]=simulate_popV2(G,Tdiv_pop_states,timepoint_interval);
     tnow=tnow+timepoint_interval;% update the time
     
     % make a hypothetical 'sort'
+    iS=iS+1;
+    for iSortGene=1:length(sortGenes)
+        sortGene=sortGenes{iSortGene};
+        S(iS).(sortGene).idxHi=Tdiv_pop_states.(sortGene);
+        S(iS).(sortGene).dtSort=tnow;
+    end
     
-    % take hypothetical measurements
-    iMeas=iMeas+1;
-    
-    % take sister naive and sister control measurements
-    Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
-    Meas(iMeas).time=tnow;
+    %% make measurements on sorted cells.
+    %iMeas=iMeas+1;
+    % first decide on past sort times to take measurements for
+    if length(S)<=20
+        iStoMeasureList=1:length(S);
+    else
+        iStoMeasureList=[1:20,21:5:length(S)]; % take a sparser sampling to avoid huge growth in measurements
+    end
+    % now take measurements (Both sister-naive and sister-control measurements)
+    for  iStoMeasure=iStoMeasureList
+        sortGeneList=fields(S(iStoMeasure))';
+        for iSortGene=1:length(sortGeneList)
+            sortGene=sortGeneList{iSortGene};
+            idxHiAtSortTime=S(iStoMeasure).(sortGene).idxHi;
+        	Meas=DifferentialAnalysisBinofit2(Tdiv_pop_states,idxHiAtSortTime);
+            if ~isfield(S(iStoMeasure).(sortGene),'meas')
+                iMeas=1;
+            else
+                iMeas=length(S(iStoMeasure).(sortGene).meas)+1;
+            end
+            S(iStoMeasure).(sortGene).meas(iMeas).data=Meas;
+            % record times
+            S(iStoMeasure).(sortGene).meas(iMeas).time=tnow;
+            dtSort=S(iStoMeasure).(sortGene).dtSort;
+            S(iStoMeasure).(sortGene).meas(iMeas).dtMeas=tnow-dtSort;
+        end
+    end
 end
+%%
+save('sim1','S')
 
 %%
 tutorialApp1(Meas)
