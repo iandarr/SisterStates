@@ -26,7 +26,7 @@
 %% simulation inputs
 clear
 rng(1)
-ncells=5;
+ncells=500;
 t_run_steady_state=50; %run for t_run time units;
 display_rxn_on=false;
 realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back on simluation progress and expected simulation time after this many
@@ -45,9 +45,9 @@ s = {'g1',   'g2',    'g3',    'g4',    'g5',   'g6', 'g7', 'g8', 'g9'};
 t = {'g2',   'g3',    'g4',    'g5',   'g6',   'g7', 'g8', 'g9', 'g10'};
 G = digraph(s,t); %create digraph
 %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
-G.Edges.rate_affecting=repmat({'pro'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
+G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
 G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
-G.Edges.funct_mag=     repmat(10,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
+G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
 
 % %% Create gene network G (parallel)
 % s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
@@ -70,8 +70,8 @@ norm_ProRate=1;
 norm_DecRate=1;
 G.Nodes.NatProRate=ones(nnodes,1)*norm_ProRate; %apply general rates
 G.Nodes.NatDecRate=ones(nnodes,1)*norm_DecRate; %apply general rates
-G.Nodes.NatProRate(1)=1; %first node
-G.Nodes.NatDecRate(1)=1; %first node
+G.Nodes.NatProRate(1)=0.1; %first node
+G.Nodes.NatDecRate(1)=0.1; %first node
 
 G.Edges.relationship_label=join([G.Edges.rate_affecting,G.Edges.funct_type,cellstr(num2str(G.Edges.funct_mag))]); %just for the graph, not used elsewhere
 G.Edges.relationship_label_short=replace(G.Edges.relationship_label,{'pro','dec','mult','add',' '},{'P','D','*','+',''});
@@ -110,8 +110,8 @@ Tdiv_pop_states=[Tdiv_cellLabels,Tdiv_pop_states]; %add cell labels
 %% Now run the population in short incremental periods which are shorter than the timescale of a single reaction
 % since production reactions occur at rate 1 in our updateV1_4binary
 % function, want to run it less than this.
-timepoint_interval=.5;
-time_to_run=10;
+timepoint_interval=0.2;
+time_to_run=30;
 tnow=0;
 rng(1)
 % %% Now simulate forward in time. At longer periods of time, we will
@@ -130,7 +130,11 @@ MeasureSisterNaive=struct();
 MeasureSisterControl=struct();
 alpha=0.05; % alpha for confidence interval on plot
 
-iMeas=0;
+GroupingGenes=G.Nodes.Name; % use all genes to group cells by
+
+iMeas=1;
+Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
+Meas(iMeas).time=tnow;
 while tnow<=time_to_run
     [Tdiv_pop_states,Tdiv_pop_propensities,Tdiv_rxns]=simulate_popV2(G,Tdiv_pop_states,timepoint_interval);
     tnow=tnow+timepoint_interval;% update the time
@@ -139,7 +143,6 @@ while tnow<=time_to_run
     iMeas=iMeas+1;
     
     % take sister naive and sister control measurements
-    GroupingGenes=G.Nodes.Name; % use all genes to group cells by
     Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
     Meas(iMeas).time=tnow;
 end
