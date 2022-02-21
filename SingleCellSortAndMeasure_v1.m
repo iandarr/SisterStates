@@ -6,7 +6,7 @@
 %% simulation inputs
 clear
 rng(1)
-P.ncells=2000;
+P.ncells=10000;
 P.t_run_steady_state=20; %run for t_run time units;
 display_rxn_on=false;
 realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back on simluation progress and expected simulation time after this many
@@ -20,7 +20,7 @@ realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back
 % G.Edges.funct_type=    {'mult', 'mult','add',  'add',  'mult', 'add',  'add'}';
 % G.Edges.funct_mag=     [10,    10,      1,      1,      10,     -1,      -2]';
 
-%% Create gene network G (linear)
+% %% Create gene network G (linear)
 % s = {'g1',   'g2',    'g3',    'g4',    'g5',   'g6', 'g7', 'g8', 'g9'};
 % t = {'g2',   'g3',    'g4',    'g5',   'g6',   'g7', 'g8', 'g9', 'g10'};
 % G = digraph(s,t); %create digraph
@@ -38,6 +38,22 @@ G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  
 G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
 G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
 
+%% Create gene network G (parallel, with postive feedback)
+s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
+t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
+s(end+1)={'x4'};
+t(end+1)={'x3'};
+G = digraph(s,t); %create digraph
+%                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
+G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
+G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
+G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
+
+% x4-->x3 affects production (current code can't handle 2 edges affecting a given rate (pro or dec)
+idx=all([strcmp(G.Edges.EndNodes(:,1),'x4'),strcmp(G.Edges.EndNodes(:,2),'x3')],2);
+G.Edges.rate_affecting(idx)={'pro'};
+G.Edges.funct_type(idx)={'mult'};
+G.Edges.funct_mag(idx)=4;
 %%
 nnodes=numnodes(G);
 nedges=numedges(G);
@@ -167,8 +183,10 @@ while tnow<=P.time_to_run
     end
 end
 %% save/load sort data in struct S
-save('sim7','P','G','Tinit_pop_states','S')
-load('sim7')
+save('sim9.1','P','G','Tinit_pop_states','S')
+load('sim9.1')
+%%
+save('sim9_1','P','G','Tinit_pop_states','S')
 %%
 ViewSisterStates(S,G)
 

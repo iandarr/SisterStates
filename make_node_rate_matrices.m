@@ -83,7 +83,7 @@ for inode=1:nnodes
     % check everything either 'pro' or 'dec'
     nProPred=sum(isProPred);
     nDecPred=sum(isDecPred);
-    if npredecessors~=nProPred+nDecPred,error('Check that G.Edges.rate_affecting is either pro or deg since npredecessors=%i, nProRelat=%i,nDecRelat=%i',npredecessors,nProPred,nDecPred),end
+    if npredecessors~=nProPred+nDecPred,error('Check that G.Edges.rate_affecting is either pro or dec since npredecessors=%i, nProRelat=%i,nDecRelat=%i',npredecessors,nProPred,nDecPred),end
     indProPred=find(isProPred); %indices of the production predecessors
     indDecPred=find(isDecPred); %indices of the decay predecessors
     
