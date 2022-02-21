@@ -170,7 +170,7 @@ end
 save('sim7','P','G','Tinit_pop_states','S')
 load('sim7')
 %%
-ViewSisterStates(S)
+ViewSisterStates(S,G)
 
 
 
