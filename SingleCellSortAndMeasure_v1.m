@@ -6,12 +6,12 @@
 %% simulation inputs
 clear
 rng(1)
-ncells=400;
-t_run_steady_state=20; %run for t_run time units;
+P.ncells=2000;
+P.t_run_steady_state=20; %run for t_run time units;
 display_rxn_on=false;
 realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back on simluation progress and expected simulation time after this many
 
-% %% Create gene network G
+% %% Create gene network G (mixture of edge relationships)
 % s = {'U',   'X',    'Y',    'U',    'P1',   'P2', 'R'};
 % t = {'X',   'Y',    'Z',    'P1',   'P2',   'P3', 'X'};
 % G = digraph(s,t); %create digraph
@@ -21,22 +21,22 @@ realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back
 % G.Edges.funct_mag=     [10,    10,      1,      1,      10,     -1,      -2]';
 
 %% Create gene network G (linear)
-s = {'g1',   'g2',    'g3',    'g4',    'g5',   'g6', 'g7', 'g8', 'g9'};
-t = {'g2',   'g3',    'g4',    'g5',   'g6',   'g7', 'g8', 'g9', 'g10'};
+% s = {'g1',   'g2',    'g3',    'g4',    'g5',   'g6', 'g7', 'g8', 'g9'};
+% t = {'g2',   'g3',    'g4',    'g5',   'g6',   'g7', 'g8', 'g9', 'g10'};
+% G = digraph(s,t); %create digraph
+% %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
+% G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
+% G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
+% G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
+
+% %% Create gene network G (parallel)
+s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
+t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
 G = digraph(s,t); %create digraph
 %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
 G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
 G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
 G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
-
-% %% Create gene network G (parallel)
-% s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
-% t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
-% G = digraph(s,t); %create digraph
-% %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
-% G.Edges.rate_affecting=repmat({'pro'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
-% G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
-% G.Edges.funct_mag=     repmat(10,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
 
 %%
 nnodes=numnodes(G);
@@ -50,8 +50,8 @@ norm_ProRate=1;
 norm_DecRate=1;
 G.Nodes.NatProRate=ones(nnodes,1)*norm_ProRate; %apply general rates
 G.Nodes.NatDecRate=ones(nnodes,1)*norm_DecRate; %apply general rates
-G.Nodes.NatProRate(1)=1; %first node
-G.Nodes.NatDecRate(1)=1; %first node
+G.Nodes.NatProRate(1)=0.2; %first node
+G.Nodes.NatDecRate(1)=0.2; %first node
 
 G.Edges.relationship_label=join([G.Edges.rate_affecting,G.Edges.funct_type,cellstr(num2str(G.Edges.funct_mag))]); %just for the graph, not used elsewhere
 G.Edges.relationship_label_short=replace(G.Edges.relationship_label,{'pro','dec','mult','add',' '},{'P','D','*','+',''});
@@ -60,17 +60,17 @@ G.Edges.relationship_label_short=replace(G.Edges.relationship_label,{'pro','dec'
 % G.Nodes.proPreds, G.Nodes.proMatrix, G.Nodes.decPreds, G.Nodes.decMatrix
 G=make_node_rate_matrices(G);
 
-%% plot the network graph
+% plot the network graph
 clf
 plot(G,'EdgeLabel',G.Edges.relationship_label_short)
 
 %% Initialize population by simulating it to a 'steady state'
 ngenes=size(G.Nodes,1);
-Tinit_pop_states=array2table(false([ncells,ngenes])); %start at all zero states
+Tinit_pop_states=array2table(false([P.ncells,ngenes])); %start at all zero states
 Tinit_pop_states.Properties.VariableNames=G.Nodes.Name';
 % SIMULATE POPULATION
 fprintf("simulating network to a 'steady state'...")
-[Tss_pop_states,Tss_pop_propensities,T_rxns]=simulate_popV2(G,Tinit_pop_states,t_run_steady_state);%,display_rxn_on,realtime_print_sim_progress);
+[Tss_pop_states,Tss_pop_propensities,T_rxns]=simulate_popV2(G,Tinit_pop_states,P.t_run_steady_state);%,display_rxn_on,realtime_print_sim_progress);
 fprintf("done\n")
 % or load steady state from file
 %clear
@@ -84,19 +84,19 @@ Tdiv_pop_states=table();
 %Tdiv_pop_states.Properties.VariableNames=Tss_pop_states.Properties.VariableNames;
 Tdiv_pop_states(1:2:2*height(Tss_pop_states),:)=Tss_pop_states; % odd rows
 Tdiv_pop_states(2:2:2*height(Tss_pop_states),:)=Tss_pop_states; % even rows
-ncells=height(Tdiv_pop_states);
+P.ncells=height(Tdiv_pop_states);
 % %% add some labels to the population
-Tdiv_cellLabels=table([1:ncells]',floor([1:.5:ncells/2+.5])','VariableNames',{'cellInd','parentInd'});
+Tdiv_cellLabels=table([1:P.ncells]',floor([1:.5:P.ncells/2+.5])','VariableNames',{'cellInd','parentInd'});
 Tdiv_pop_states=[Tdiv_cellLabels,Tdiv_pop_states]; %add cell labels
 
 %% Now run the population in short incremental periods which are shorter than the timescale of a single reaction
 % since production reactions occur at rate 1 in our updateV1_4binary
 % function, want to run it less than this.
-timepoint_interval=0.05;
-maxSortTime=1;
-time_to_run=2;
+P.timepoint_interval=0.05;
+P.maxSortTime=1;
+P.time_to_run=2;
 tnow=0;
-rng(1)
+
 % %% Now simulate forward in time. At longer periods of time, we will
 % simulate the results from taking single-cell measurements and calculating
 % one of the following:
@@ -111,25 +111,25 @@ rng(1)
 % timepoints and monitoring for how states change
 MeasureSisterNaive=struct();
 MeasureSisterControl=struct();
-alpha=0.05; % alpha for confidence interval on plot
+%alpha=0.05; % alpha for confidence interval on plot
 
-sortGenes=G.Nodes.Name; % use all genes to sort cells by
+P.sortGenes=G.Nodes.Name; % use all genes to sort cells by
 %GroupingGenes=G.Nodes.Name; % use all genes to group cells by
 
 S=struct();
 iS=0;
-randSeed=0;
+P.randSeedStart=0;
 %Meas(iMeas).data=DifferentialAnalysisBinofit(Tdiv_pop_states,GroupingGenes);
 %Meas(iMeas).time=tnow;
-while tnow<=time_to_run
-    fprintf('tnow=%f of %f\n',tnow,time_to_run)
+while tnow<=P.time_to_run
+    fprintf('tnow=%f of %f\n',tnow,P.time_to_run)
     
     % make a hypothetical 'sort' (don't really need to do this for all
     % times though
-    if tnow<=maxSortTime
+    if tnow<=P.maxSortTime
     iS=iS+1;
-    for iSortGene=1:length(sortGenes)
-        sortGene=sortGenes{iSortGene};
+    for iSortGene=1:length(P.sortGenes)
+        sortGene=P.sortGenes{iSortGene};
         S(iS).(sortGene).idxHi=Tdiv_pop_states.(sortGene);
         S(iS).(sortGene).dtSort=tnow;
     end
@@ -145,8 +145,8 @@ while tnow<=time_to_run
         for iSortGene=1:length(sortGeneList)
             sortGene=sortGeneList{iSortGene};
             idxHiAtSortTime=S(iStoMeasure).(sortGene).idxHi;
-            randSeed=randSeed+1;
-        	Meas=DifferentialAnalysisBinofit2(Tdiv_pop_states,idxHiAtSortTime,randSeed);
+            P.randSeedStart=P.randSeedStart+1;
+        	Meas=DifferentialAnalysisBinofit2(Tdiv_pop_states,idxHiAtSortTime,P.randSeedStart);
             if ~isfield(S(iStoMeasure).(sortGene),'meas')
                 iMeas=1;
             else
@@ -161,14 +161,14 @@ while tnow<=time_to_run
     end
     
     % simulate the population forward
-    if tnow<=time_to_run
-        [Tdiv_pop_states,Tdiv_pop_propensities,Tdiv_rxns]=simulate_popV2(G,Tdiv_pop_states,timepoint_interval);
-        tnow=tnow+timepoint_interval;% update the time
+    if tnow<=P.time_to_run
+        [Tdiv_pop_states,Tdiv_pop_propensities,Tdiv_rxns]=simulate_popV2(G,Tdiv_pop_states,P.timepoint_interval);
+        tnow=tnow+P.timepoint_interval;% update the time
     end
 end
 %% save/load sort data in struct S
-save('sim4','S')
-load('sim4','S')
+save('sim7','P','G','Tinit_pop_states','S')
+load('sim7')
 %%
 ViewSisterStates(S)
 
