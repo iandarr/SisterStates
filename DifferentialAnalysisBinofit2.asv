@@ -1,7 +1,4 @@
-function Meas=DifferentialAnalysisBinofit2(T_states,idxHiAtSortTime,randSeed)
-if nargin>=3
-    rng(randSeed)
-end
+function Meas=DifferentialAnalysisBinofit2(T_states,idxHiAtSortTime)
 % DifferentialAnalysisBinofit2 now accepts a list of indices
 % (idxHiAtSortTime) instead of the sort genes, since with this function version the current state is
 % not the state at time of sort
@@ -52,16 +49,16 @@ for iAnalysis=1:numDifferentialAnalysisTypes
             T_states_low=T_states(idxGroupLow,:);
 
         case 'SisterNaiveDownsampled'
+            
             indGroupHigh=find(idxGroupHigh);
-            indGroupLow=find(idxGroupLow);
+            ind
             numCellsGroupHigh=sum(idxGroupHigh);
             numCellsGroupLow=sum(idxGroupLow);
-            numCellsToSample=min([numCellsGroupHigh,numCellsGroupLow,numSisterControlCellsPerGroup]);
-            % I do not set random seed with rng here
-            indGroupHighDownsampled=indGroupHigh(randperm(numCellsGroupHigh,numCellsToSample));
-            indGroupLowDownsampled=indGroupLow(randperm(numCellsGroupLow,numCellsToSample));
-            T_states_high=T_states(indGroupHighDownsampled,:);
-            T_states_low=T_states(indGroupLowDownsampled,:);
+            numCellsToSample=min(numCellsGroupHigh,numCellsGroupLow,numSisterControlCellsPerGroup);
+            
+            if numCellsToSample<numCellsGroupHigh
+                
+            end
         otherwise
             error('case not handled')
     end
