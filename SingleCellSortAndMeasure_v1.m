@@ -5,6 +5,8 @@
 
 %% simulation inputs
 clear
+
+simulation_file='sim1_parallel_posFeedback.mat';
 rng(1)
 P.ncells=10000;
 P.t_run_steady_state=20; %run for t_run time units;
@@ -30,13 +32,13 @@ realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back
 % G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
 
 % %% Create gene network G (parallel)
-s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
-t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
-G = digraph(s,t); %create digraph
-%                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
-G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
-G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
-G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
+% s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
+% t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
+% G = digraph(s,t); %create digraph
+% %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
+% G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
+% G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
+% G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
 
 %% Create gene network G (parallel, with postive feedback)
 s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
@@ -182,12 +184,11 @@ while tnow<=P.time_to_run
         tnow=tnow+P.timepoint_interval;% update the time
     end
 end
-%% save/load sort data in struct S
-save('sim9.1','P','G','Tinit_pop_states','S')
-load('sim9.1')
-%%
-save('sim9_1','P','G','Tinit_pop_states','S')
-%%
+%% save/load the simulation (sort S, parameters P, initial population states Tinit_pop_states, and gene network G)
+save(simulation_file,'P','G','Tinit_pop_states','S')
+
+%% load and view a simulation
+load(simulation_file)
 ViewSisterStates(S,G)
 
 
