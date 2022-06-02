@@ -188,6 +188,7 @@ end
 save(simulation_file,'P','G','Tinit_pop_states','S')
 
 %% load and view a simulation
+simulation_file='sim1_parallel_posFeedback.mat';
 load(simulation_file)
 ViewSisterStates(S,G)
 
