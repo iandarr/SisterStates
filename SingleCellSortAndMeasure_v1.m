@@ -1,13 +1,13 @@
 % Gillespie to simulate gene networks and infer direct biomolecular
 % interactions based on sister-cell differential analysis
-% 
+%
 % gene exprssion states are binary (on=1, off=0)
 
 %% simulation inputs
 clear
 
-simulation_file='sim1_parallel_posFeedback.mat';
 rng(1)
+%P.ncells=10000;
 P.ncells=10000;
 P.t_run_steady_state=20; %run for t_run time units;
 display_rxn_on=false;
@@ -22,16 +22,17 @@ realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back
 % G.Edges.funct_type=    {'mult', 'mult','add',  'add',  'mult', 'add',  'add'}';
 % G.Edges.funct_mag=     [10,    10,      1,      1,      10,     -1,      -2]';
 
-% %% Create gene network G (linear)
-% s = {'g1',   'g2',    'g3',    'g4',    'g5',   'g6', 'g7', 'g8', 'g9'};
-% t = {'g2',   'g3',    'g4',    'g5',   'g6',   'g7', 'g8', 'g9', 'g10'};
-% G = digraph(s,t); %create digraph
-% %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
-% G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
-% G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
-% G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
+%% Create gene network G (linear)
+simulation_file='sim2_linear.mat';
+s = {'g1',   'g2',    'g3',    'g4',    'g5',   'g6', 'g7', 'g8', 'g9'};
+t = {'g2',   'g3',    'g4',    'g5',   'g6',   'g7', 'g8', 'g9', 'g10'};
+G = digraph(s,t); %create digraph
+G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);
+G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);
+G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);
 
 % %% Create gene network G (parallel)
+% simulation_file='sim3_parallel.mat';
 % s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
 % t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
 % G = digraph(s,t); %create digraph
@@ -41,21 +42,22 @@ realtime_print_sim_progress=20; %seconds (actual, real time seconds) report back
 % G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
 
 %% Create gene network G (parallel, with postive feedback)
-s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
-t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
-s(end+1)={'x4'};
-t(end+1)={'x3'};
-G = digraph(s,t); %create digraph
-%                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
-G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
-G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
-G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
-
-% x4-->x3 affects production (current code can't handle 2 edges affecting a given rate (pro or dec)
-idx=all([strcmp(G.Edges.EndNodes(:,1),'x4'),strcmp(G.Edges.EndNodes(:,2),'x3')],2);
-G.Edges.rate_affecting(idx)={'pro'};
-G.Edges.funct_type(idx)={'mult'};
-G.Edges.funct_mag(idx)=4;
+% simulation_file='sim1_parallel_posFeedback.mat';
+% s = {'U',   'x1',    'x2',    'x3',    'x4',    'x5',   'x6',    'U',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6'};
+% t = {'x1',   'x2',    'x3',    'x4',   'x5',    'x6',   'x7',    'p1',    'p2',    'p3',    'p4',   'p5',   'p6',    'p7'};
+% s(end+1)={'x4'};
+% t(end+1)={'x3'};
+% G = digraph(s,t); %create digraph
+% %                       U-X      X-Y    Y-Z     U-P1    P1-P2   P2-P3   R-X      Ualt-X
+% G.Edges.rate_affecting=repmat({'dec'},[numedges(G),1]);%{'pro', 'pro',  'pro',  'pro',  'pro',  'pro',  'pro'}';
+% G.Edges.funct_type=    repmat({'mult'},[numedges(G),1]);% {'mult', 'mult','mult',  'mult',  'mult', 'mult',  'mult'}';
+% G.Edges.funct_mag=     repmat(0.2,[numedges(G),1]);%[10,    10,      10,      10,      10,     10,      10]';
+%
+% % x4-->x3 affects production (current code can't handle 2 edges affecting a given rate (pro or dec)
+% idx=all([strcmp(G.Edges.EndNodes(:,1),'x4'),strcmp(G.Edges.EndNodes(:,2),'x3')],2);
+% G.Edges.rate_affecting(idx)={'pro'};
+% G.Edges.funct_type(idx)={'mult'};
+% G.Edges.funct_mag(idx)=4;
 %%
 nnodes=numnodes(G);
 nedges=numedges(G);
@@ -68,8 +70,8 @@ norm_ProRate=1;
 norm_DecRate=1;
 G.Nodes.NatProRate=ones(nnodes,1)*norm_ProRate; %apply general rates
 G.Nodes.NatDecRate=ones(nnodes,1)*norm_DecRate; %apply general rates
-G.Nodes.NatProRate(1)=0.2; %first node
-G.Nodes.NatDecRate(1)=0.2; %first node
+%G.Nodes.NatProRate(1)=0.2; %first node
+%G.Nodes.NatDecRate(1)=0.2; %first node
 
 G.Edges.relationship_label=join([G.Edges.rate_affecting,G.Edges.funct_type,cellstr(num2str(G.Edges.funct_mag))]); %just for the graph, not used elsewhere
 G.Edges.relationship_label_short=replace(G.Edges.relationship_label,{'pro','dec','mult','add',' '},{'P','D','*','+',''});
@@ -141,19 +143,19 @@ P.randSeedStart=0;
 %Meas(iMeas).time=tnow;
 while tnow<=P.time_to_run
     fprintf('tnow=%f of %f\n',tnow,P.time_to_run)
-    
+
     % make a hypothetical 'sort' (don't really need to do this for all
     % times though
     if tnow<=P.maxSortTime
-    iS=iS+1;
-    for iSortGene=1:length(P.sortGenes)
-        sortGene=P.sortGenes{iSortGene};
-        S(iS).(sortGene).idxHi=Tdiv_pop_states.(sortGene);
-        S(iS).(sortGene).dtSort=tnow;
+        iS=iS+1;
+        for iSortGene=1:length(P.sortGenes)
+            sortGene=P.sortGenes{iSortGene};
+            S(iS).(sortGene).idxHi=Tdiv_pop_states.(sortGene);
+            S(iS).(sortGene).dtSort=tnow;
+        end
     end
-    end
-    
-    %% make measurements on sorted cells.
+
+    % make measurements on sorted cells.
     %iMeas=iMeas+1;
     % first decide on past sort times to take measurements for
     iStoMeasureList=1:length(S); % all of them
@@ -164,7 +166,7 @@ while tnow<=P.time_to_run
             sortGene=sortGeneList{iSortGene};
             idxHiAtSortTime=S(iStoMeasure).(sortGene).idxHi;
             P.randSeedStart=P.randSeedStart+1;
-        	Meas=DifferentialAnalysisBinofit2(Tdiv_pop_states,idxHiAtSortTime,P.randSeedStart);
+            Meas=DifferentialAnalysisBinofit2(Tdiv_pop_states,idxHiAtSortTime,P.randSeedStart);
             if ~isfield(S(iStoMeasure).(sortGene),'meas')
                 iMeas=1;
             else
@@ -177,7 +179,7 @@ while tnow<=P.time_to_run
             S(iStoMeasure).(sortGene).meas(iMeas).dtMeas=tnow-dtSort;
         end
     end
-    
+
     % simulate the population forward
     if tnow<=P.time_to_run
         [Tdiv_pop_states,Tdiv_pop_propensities,Tdiv_rxns]=simulate_popV2(G,Tdiv_pop_states,P.timepoint_interval);
@@ -185,10 +187,11 @@ while tnow<=P.time_to_run
     end
 end
 %% save/load the simulation (sort S, parameters P, initial population states Tinit_pop_states, and gene network G)
-save(simulation_file,'P','G','Tinit_pop_states','S')
+save(simulation_file,'P','G','Tinit_pop_states','Tss_pop_states','S')
 
 %% load and view a simulation
-simulation_file='sim1_parallel_posFeedback.mat';
+%simulation_file='sim1_parallel_posFeedback.mat';
+simulation_file='sim2_linear.mat';
 load(simulation_file)
 ViewSisterStates(S,G)
 
